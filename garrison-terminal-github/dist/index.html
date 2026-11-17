@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1115">
+  <meta name="description" content="卫戍协议·规程·序列Ⅰ：干员、技能技力、驻守特质、盟约速查与阵容规划。无需登录，直接使用。">
+  <title>卫戍终端 / GARRISON NEXUS</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="stylesheet" href="style.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail" aria-label="快捷导航">
+      <a class="brand-symbol" href="#operators" aria-label="卫戍终端首页"><svg viewBox="0 0 40 40"><path d="M20 3 36 12v17L20 38 4 29V12Z"/><path d="m11 27 9-16 9 16H11Zm9-16v23M4 12l16 10 16-10"/></svg></a>
+      <span class="rail-rule"></span>
+      <button class="rail-nav active" data-nav="operators" aria-label="干员档案" title="干员档案"><span>▦</span></button>
+      <button class="rail-nav" data-nav="equipment" aria-label="战备资料" title="战备资料"><span>◇</span></button>
+      <button class="rail-nav" data-nav="squad" aria-label="阵容规划" title="阵容规划"><span>⌘</span></button>
+      <div class="rail-bottom"><span class="online-dot"></span><span class="vertical-text">RHODES ISLAND · FIELD TERMINAL</span><button data-action="sources" aria-label="数据来源" title="数据来源">ⓘ</button></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <a class="wordmark" href="#operators">卫戍终端 <span>GARRISON NEXUS</span></a>
+        <nav class="main-nav" aria-label="主导航"><button class="active" data-nav="operators">干员档案<span>01</span></button><button data-nav="equipment">战备资料<span>02</span></button><button data-nav="squad">阵容规划<span>03</span></button></nav>
+        <button class="version-pill" data-action="sources"><i></i> 规程 · 序列 Ⅰ <span>↗</span></button>
+      </header>
+      <main>
+        <section class="hero" aria-label="当前赛季">
+          <div class="hero-grid"></div><div class="hero-cross cross-one">+</div><div class="hero-cross cross-two">+</div>
+          <div class="hero-copy"><div class="eyebrow"><span class="status-square"></span> TACTICAL DATABASE <span class="muted">/ SEASON 03</span></div><h1>每一份情报，<br>都是制胜的<span>先机。</span></h1><p>干员、盟约、战斗技能。让下一步部署，更有把握。</p><div class="hero-meta"><span><b>143</b> 固定干员</span><i></i><span><b>26</b> 盟约档案</span><i></i><span>数据核对 <b class="date">2026.11.17</b></span></div></div>
+          <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="art-index">VI / URSUS</span><img src="assets/talulah.webp" alt=""><div class="art-caption"><span>OPERATOR / 4247</span><strong>塔露拉 <small>TALULAH</small></strong></div></div>
+          <div class="hero-season"><span>当前协议</span><strong>规程<span>序列 Ⅰ</span></strong><small>2026.11.08 — OPEN</small><div class="signal-bars">▁ ▃ ▅ ▂ ▆ ▃ ▅ ▇ ▂ ▄</div></div>
+          <div class="hero-bottom"><span>INFORMATION IS AN ADVANTAGE.</span><span>CN SERVER <i class="online-dot"></i> DATABASE CONNECTED</span></div>
+        </section>
+        <div class="page-heading"><div><span class="section-index" id="section-index">01 / OPERATOR ARCHIVE</span><h2 id="page-title">干员档案<span> /</span></h2></div><div class="heading-actions"><button class="text-button" id="focus-button" data-action="focus">⛶ <span>局内专注</span></button><button class="text-button" data-action="sources">⌁ 数据说明</button></div></div>
+        <div class="querybar"><label class="search-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="搜索干员、盟约、技能或特质关键词…" autocomplete="off"><kbd>/</kbd></label><button id="favorites-button" class="control-button" data-action="favorites">☆ 仅看收藏</button><button id="filter-toggle" class="control-button" data-action="filters">☷ 筛选</button></div>
+        <div id="pool-controls" class="pool-controls"></div>
+        <section id="ban-controls" class="ban-controls" aria-label="本局禁用盟约"></section>
+        <div id="identity-controls" class="identity-controls"></div>
+        <div class="catalog-layout"><aside id="filters" class="filter-panel" aria-label="档案筛选"></aside><section class="results" aria-live="polite"><div class="results-toolbar"><div id="result-count">正在载入档案…</div><div class="view-controls"><select id="sort" aria-label="排序方式"><option value="tier-desc">等阶从高到低</option><option value="tier-asc" selected>等阶从低到高</option><option value="name">阶内按名称</option><option value="sp">阶内技力从低到高</option></select><button class="icon-button" data-action="grid" aria-label="卡片视图">▦</button><button class="icon-button active" data-action="list" aria-label="头像视图" title="头像视图">▧</button></div></div><div id="active-filters"></div><p id="catalog-hint" class="catalog-hint"></p><div id="content" class="operator-grid"><div class="loading">正在同步本期档案…</div></div><div id="load-more"></div></section></div>
+        <footer><span>GARRISON NEXUS <i>/</i> 非官方玩家工具 · 游戏内容版权归鹰角网络所有</span><button data-action="sources">查看数据快照与来源 ↗</button></footer>
+      </main>
+    </div>
+  </div>
+  <div id="squad-dock" class="squad-dock"></div>
+  <div id="compare-dock" class="compare-dock" hidden></div>
+  <div id="overlay" class="overlay" hidden><section id="detail-panel" class="detail-panel" role="dialog" aria-modal="true" aria-label="档案详情" tabindex="-1"></section></div>
+  <aside id="hover-card" class="hover-card" role="dialog" aria-modal="false" aria-label="悬浮信息" hidden></aside>
+  <div id="toast" class="toast" role="status"></div>
+  <noscript>请启用 JavaScript 以检索本期干员档案。</noscript>
+</body>
+</html>
