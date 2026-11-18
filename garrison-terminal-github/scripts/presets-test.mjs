@@ -10,7 +10,10 @@ async function save(name){await page.locator('#preset-name').fill(name);await pa
 await page.goto('http://localhost:4173/#squad');await page.waitForSelector('#preset-save-form');assert.equal(await page.locator('#preset-save-form button').isDisabled(),true);
 await page.locator('.main-nav [data-nav=operators]').click();await page.locator('.tile-portrait').nth(0).click();await page.locator('.tile-portrait').nth(1).click();await page.locator('.main-nav [data-nav=squad]').click();
 await page.locator('.squad-row [data-member-state][data-value=elite]').first().click();await page.locator('#capacity-page').check();
+await save('');assert.equal((await entries()).length,0);assert.match(await page.locator('#preset-feedback').textContent(),/填写预设名称/);assert.equal(await page.locator('#preset-name').evaluate(el=>el===document.activeElement),true);
+await save('   ');assert.equal((await entries()).length,0);assert.equal(await page.locator('#preset-name').getAttribute('aria-invalid'),'true');
 await save('乌萨斯一队');let list=await entries();assert.equal(list.length,1);const firstId=list[0].id,firstSnapshot=structuredClone(list[0]);assert.equal(list[0].capacity,9);assert.equal(list[0].squad.length,2);assert.equal(list[0].squad[0].elite,true);
+assert.match(await page.locator('#preset-feedback').textContent(),/已保存预设「乌萨斯一队」/);
 await page.locator('.squad-actions [data-action=clear-squad]').click();assert.equal(await page.locator('.squad-row').count(),0);assert.equal(await page.locator('.preset-card').count(),1);await page.locator(`[data-preset-load="${firstId}"]`).click();assert.equal(await page.locator('.squad-row').count(),2);assert.equal(await page.locator('.dock-slot').count(),9);
 await page.locator('.squad-row [data-member-state][data-value=normal]').first().click();await page.locator('.squad-row .remove-button').last().click();await page.locator('#capacity-page').uncheck();await save('速查二队');list=await entries();assert.equal(list.length,2);const secondId=list[0].id;assert.deepEqual(list.find(p=>p.id===firstId),firstSnapshot,'Presets must be independent snapshots');assert.equal(list[0].capacity,8);assert.equal(list[0].squad.length,1);
 await page.reload();await page.waitForSelector('.preset-card');assert.equal(await page.locator('.preset-card').count(),2);assert.equal(await page.locator('.squad-row').count(),1);await page.locator(`[data-preset-load="${firstId}"]`).click();assert.equal(await page.locator('.squad-row').count(),2);assert.equal(await page.locator('.dock-slot').count(),9);
@@ -21,7 +24,30 @@ await page.locator(`[data-preset-load="${firstId}"]`).click();await page.locator
 await page.locator(`[data-preset-delete="${firstId}"]`).click();assert.equal((await entries()).length,1);await page.locator('#toast').click();assert.equal((await entries()).length,2);
 await page.evaluate(()=>{window.originalPresetSet=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){if(key==='garrison-nexus-presets-v1')throw new DOMException('full','QuotaExceededError');return window.originalPresetSet.call(this,key,value);};});
 await save('应当失败');assert.equal((await entries()).length,2);assert.match(await page.locator('#toast').textContent(),/未保存/);await page.evaluate(()=>{Storage.prototype.setItem=window.originalPresetSet;});
+assert.match(await page.locator('#preset-feedback').textContent(),/未保存/);assert.equal(await page.locator('#preset-name').inputValue(),'应当失败','Keep the name for retrying a failed save');
 for(let i=0;i<15;i++)await save('测试预设 '+i);list=await entries();assert.equal(list.length,17);assert.equal(new Set(list.map(p=>p.id)).size,17);assert.equal(await page.locator('.preset-card').count(),12);await page.locator('[data-action=preset-more]').click();assert.equal(await page.locator('.preset-card').count(),17);
 await page.reload();await page.waitForSelector('.preset-card');assert.equal((await entries()).length,17);assert.equal(await page.locator('.preset-card').count(),12);await page.locator('#preset-search').fill('测试预设 14');assert.equal(await page.locator('.preset-card').count(),1);await page.locator('#preset-search').fill('');
 await page.locator('.preset-library').scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/garrison-presets-desktop.png'});await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.locator('.preset-library').scrollIntoViewIfNeeded();await page.screenshot({path:'/tmp/garrison-presets-mobile.png'});
-assert.deepEqual(errors,[]);console.log('PASS: independent named presets, reload persistence, load and replace, elite/capacity restore, rename escaping, search, overwrite/delete undo, quota failure, 17 presets without truncation, pagination, mobile layout.');await browser.close();
+// A non-loopback HTTP origin does not expose crypto.randomUUID.
+// Serve the same files there to reproduce browsers opening the LAN preview.
+const insecure=await browser.newPage();insecure.on('pageerror',e=>errors.push(e.message));
+await insecure.route('http://garrison.test:4173/**',async route=>{
+ const response=await route.fetch({url:'http://localhost:4173'+new URL(route.request().url()).pathname});
+ await route.fulfill({response});
+});
+await insecure.addInitScript(roster=>localStorage.setItem('garrison-nexus-v1',JSON.stringify(roster)),firstSnapshot);
+await insecure.goto('http://garrison.test:4173/#squad');await insecure.waitForSelector('#preset-save-form');
+assert.equal(await insecure.evaluate(()=>isSecureContext),false);
+assert.equal(await insecure.evaluate(()=>typeof crypto.randomUUID),'undefined');
+for(let i=0;i<3;i++){
+ await insecure.locator('#preset-name').fill('HTTP 预设 '+i);await insecure.locator('#preset-save-form button').click();
+ assert.match(await insecure.locator('#preset-feedback').textContent(),/已保存预设/);
+}
+const fallbackEntries=await insecure.evaluate(()=>JSON.parse(localStorage.getItem('garrison-nexus-presets-v1')));
+assert.equal(fallbackEntries.length,3);assert.equal(new Set(fallbackEntries.map(p=>p.id)).size,3);assert.deepEqual(fallbackEntries[0].squad,firstSnapshot.squad);
+await insecure.reload();await insecure.waitForSelector('.preset-card');assert.equal(await insecure.locator('.preset-card').count(),3);
+await insecure.locator(`[data-preset-load="${fallbackEntries[2].id}"]`).click();assert.equal(await insecure.locator('.squad-row').count(),2);
+await insecure.evaluate(()=>Object.defineProperty(window,'crypto',{value:undefined,configurable:true}));
+await insecure.locator('#preset-name').fill('无 Crypto API');await insecure.locator('#preset-name').press('Enter');assert.equal(await insecure.locator('.preset-card').count(),4);
+await insecure.close();
+assert.deepEqual(errors,[]);console.log('PASS: independent named presets, reload persistence, load and replace, elite/capacity restore, rename escaping, search, overwrite/delete undo, quota failure and inline feedback, empty/whitespace names, HTTP and missing Crypto API saves, unique fallback IDs, 17 presets without truncation, pagination, mobile layout.');await browser.close();
