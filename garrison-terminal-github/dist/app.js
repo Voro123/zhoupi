@@ -10,13 +10,13 @@ const readStore = (k, fallback) => {try {return JSON.parse(localStorage.getItem(
 let data, artwork, ops, bonds, byChess, byBond;
 let loadObserver, loadingMore=false;
 let saved = readStore('garrison-nexus-v1', {});
-let state = {stacks:0,pool:'fixed',customTier:5,view:'operators',banOpen:false,banned:new Set(Array.isArray(saved.banned)?saved.banned:[]), query:'', roles:new Set(),roleMatch:'any',stackKind:'',bonds:new Set(),tiers:new Set(),profession:'',trait:'',match:'all',elite:false,favorites:false,compact:saved.layoutVersion===2?saved.compact!==false:true,focus:!!saved.focus,limit:PAGE_SIZE,equipmentTab:'equipment'};
+let state = {stacks:0,pool:'fixed',customTier:5,view:'operators',banOpen:false,banned:new Set(Array.isArray(saved.banned)?saved.banned:[]), query:'', roles:new Set(),roleMatch:'any',stackKind:'',bonds:new Set(),tiers:new Set(),profession:'',trait:'',match:'all',elite:false,favorites:false,compact:saved.layoutVersion===2?saved.compact!==false:true,focus:typeof saved.focus==='boolean'?saved.focus:matchMedia('(max-width: 800px)').matches,limit:PAGE_SIZE,equipmentTab:'equipment'};
 let favorites = new Set(Array.isArray(saved.favorites) ? saved.favorites : []);
 const PRESET_KEY='garrison-nexus-presets-v1';
 let presets=[],presetQuery='',presetLimit=12;
 let squad = [],capacity = saved.capacity === 9 ? 9 : 8,comparison = [];
 let detail = {chess:null,variant:'main',elite:false,skill:0};
-let modalReturnFocus,toastTimer,searchTimer;
+let modalReturnFocus,modalScrollY=0,toastTimer,searchTimer;
 function persist() {
   try { localStorage.setItem('garrison-nexus-v1', JSON.stringify({favorites:[...favorites],squad,capacity,compact:state.compact,focus:state.focus,layoutVersion:2,banned:[...state.banned]})); }
   catch { toast('浏览器存储不可用；本次操作仍有效，关闭页面后将不保留。'); }
@@ -74,7 +74,17 @@ function currentOps() {
   });
 }
 function resetFilters() {state.roles.clear();state.stackKind='';state.bonds.clear();state.tiers.clear();state.profession='';state.trait='';state.query='';state.favorites=false;state.limit=PAGE_SIZE;$('#search').value='';}
+function scrollToCatalog() {
+ const target=$('#page-title').getClientRects().length?$('#page-title'):$('.querybar');
+ target.scrollIntoView({block:'start',behavior:'smooth'});
+}
+function setFiltersOpen(open) {
+ $('#filters').classList.toggle('mobile-open',open);
+ document.body.classList.toggle('filters-open',open);
+ $('#filter-toggle').setAttribute('aria-expanded',String(open));
+}
 function switchView(view, keepQuery=false) {
+  setFiltersOpen(false);
   if(!['operators','equipment','squad'].includes(view))view='operators';
   state.view=view;state.limit=PAGE_SIZE;
   if(!keepQuery){state.query='';$('#search').value='';}
@@ -128,12 +138,15 @@ function render() {
  hideHover();
  $('#pool-controls').hidden=state.view!=='operators';
  $('#pool-controls').innerHTML=`<div class="pool-tabs"><button data-pool="fixed" class="${state.pool==='fixed'?'active':''}">固定干员 <b>143</b></button><button data-pool="custom" class="${state.pool==='custom'?'active':''}">自选候选 <b>75</b></button></div>${state.pool==='custom'?`<div class="pool-tiers"><span>加入等阶</span><button data-custom-tier="5" class="${state.customTier===5?'active':''}">Ⅴ 阶</button><button data-custom-tier="6" class="${state.customTier===6?'active':''}">Ⅵ 阶</button><small>每阶至多选 2 名</small></div>`:'<span class="pool-hint">含原型补位 · 按本期配置收录</span>'}`;
- renderBanControls();renderIdentityControls();renderFilters();$('#favorites-button').classList.toggle('active',state.favorites);
+ renderBanControls();renderIdentityControls();renderFilters();
+ $('#filters').insertAdjacentHTML('afterbegin',`<div class="mobile-filter-heading"><strong>筛选条件</strong><button data-action="filters">完成 ✓</button></div>${state.view==='operators'?`<button class="mobile-favorites ${state.favorites?'active':''}" data-mobile-favorites="true" aria-pressed="${state.favorites}">${state.favorites?'★':'☆'} 仅看收藏</button>`:''}`);
+ $('#pool-controls').insertAdjacentHTML('beforeend',`<div class="mobile-training" role="group" aria-label="养成状态"><button data-quick-state="normal" aria-pressed="${!state.elite}" class="${!state.elite?'active':''}">初始</button><button data-quick-state="elite" aria-pressed="${state.elite}" class="${state.elite?'active':''}">精锐</button></div>`);
+ $('#favorites-button').classList.toggle('active',state.favorites);
  $('#favorites-button').innerHTML=state.favorites?'★ 仅看收藏':'☆ 仅看收藏';
  $('#active-filters').innerHTML=state.view==='operators'?[...state.bonds].map(id=>`<button class="filter-chip" data-filter-bond="${id}">${esc(byBond.get(id)?.name)} ×</button>`).join('')+[...state.roles].map(id=>`<button class="filter-chip identity-chip-${id}" data-identity="${id}">${identityLabel(id)} ×</button>`).join('')+(state.stackKind?`<button class="filter-chip" data-action="clear-stack-kind">${STACK_KINDS.find(k=>k.id===state.stackKind)?.label} ×</button>`:''):'';
  const content=$('#content');content.className=state.view==='operators'?'operator-grid':state.view==='equipment'?'equipment-grid':'';
  $('#catalog-hint').hidden=state.view!=='operators';
- $('#catalog-hint').innerHTML=state.compact?'<span class="desktop-hint">单击头像选入／移出阵容 · 悬浮头像查看特质 · 筛选栏可查盟约效果 · 右键完整档案</span><span class="touch-hint">点按头像选入阵容 · 长按查看详情 · 点按盟约查看效果</span>':'筛选栏可查盟约效果 · 切换头像视图可快速选人';
+ $('#catalog-hint').innerHTML=state.compact?'<span class="desktop-hint">单击头像选入／移出阵容 · 悬浮头像查看特质 · 筛选栏可查盟约效果 · 右键完整档案</span><span class="touch-hint">点按选入／移出 · 长按右侧介绍 · 点按盟约查看效果</span>':'筛选栏可查盟约效果 · 切换头像视图可快速选人';
  $('#load-more').innerHTML='';
  if(state.view==='operators') {
   const result=currentOps();$('#result-count').innerHTML=`检索到 <b>${result.length}</b> 名干员 <span class="muted">/ ${state.pool==='custom'?'自选候选 '+state.customTier+' 阶':'固定槽位 143'}</span>`;
@@ -193,8 +206,19 @@ function addToSquad(id) {
  if(detail.chess===id&&!$('#overlay').hidden)renderDetail();
 }
 function compareToggle(id) {if(comparison.includes(id))comparison=comparison.filter(x=>x!==id);else if(comparison.length<2)comparison.push(id);else {toast('最多同时对照 2 名干员，请先取消一个。');return;}render();if(detail.chess&&!$('#overlay').hidden)renderDetail();}
-function showModal(html, wide=false) {hideHover();const overlay=$('#overlay'),panel=$('#detail-panel');if(overlay.hidden)modalReturnFocus=document.activeElement;panel.classList.toggle('wide',wide);panel.innerHTML=html;overlay.hidden=false;document.body.style.overflow='hidden';panel.focus();}
-function closeModal() {$('#overlay').hidden=true;document.body.style.overflow='';detail.chess=null;if(modalReturnFocus?.isConnected)modalReturnFocus.focus();}
+function showModal(html, wide=false) {
+ hideHover();const overlay=$('#overlay'),panel=$('#detail-panel'),opening=overlay.hidden,scrollTop=opening?0:panel.scrollTop;
+ if(opening){modalReturnFocus=document.activeElement;modalScrollY=window.scrollY;document.body.style.top=`-${modalScrollY}px`;document.body.classList.add('modal-open');$$('.app-shell,#squad-dock,#compare-dock').forEach(el=>el.inert=true);}
+ panel.classList.toggle('wide',wide);panel.innerHTML=html;overlay.hidden=false;
+ panel.setAttribute('aria-label',$('h2',panel)?.textContent||'档案详情');
+ panel.scrollTop=scrollTop;panel.focus({preventScroll:true});
+}
+function closeModal() {
+ if($('#overlay').hidden)return;
+ hideHover();$('#overlay').hidden=true;document.body.classList.remove('modal-open');document.body.style.top='';detail.chess=null;
+ $$('.app-shell,#squad-dock,#compare-dock').forEach(el=>el.inert=false);
+ window.scrollTo(0,modalScrollY);if(modalReturnFocus?.isConnected)modalReturnFocus.focus({preventScroll:true});
+}
 function modalHeader(label) {return `<div class="modal-topbar"><span>${label}</span><button class="close-button" data-action="close" aria-label="关闭详情">×</button></div>`;}
 function openDetail(id,elite=state.elite) {const o=byChess.get(id);if(!o)return;detail={chess:id,variant:'main',elite,skill:o.defaultSkill};renderDetail();$('#detail-panel').scrollTop=0;}
 const spType={INCREASE_WITH_TIME:'自动回复',INCREASE_WHEN_ATTACK:'攻击回复',INCREASE_WHEN_TAKEN_DAMAGE:'受击回复',INCREASE_WITH_TIME_AND_ATTACK:'自动与攻击回复',NONE:'不回复'};
@@ -207,7 +231,7 @@ function renderDetail() {
  const base=byChess.get(detail.chess);if(!base)return;
  const o=detail.variant==='backup'&&base.backup?base.backup:base,s=opState(o,detail.elite),sk=s.skills[Math.min(detail.skill,s.skills.length-1)];
  const attrs=[['生命','maxHp'],['攻击','atk'],['防御','def'],['法抗','magicResistance'],['部署费用','cost'],['阻挡数','blockCnt'],['攻击间隔','baseAttackTime'],['再部署','respawnTime']];
- showModal(modalHeader('OPERATOR RECORD / '+base.chessId.toUpperCase())+`<div class="detail-hero"><img src="${o.portrait}" alt="${esc(o.name)}立绘"><div class="detail-info"><span class="bond-tag core">${roman[base.tier]} 阶 · ${detail.elite?'精锐':'初始'}${base.hidden?' / 特殊获取':''}</span><h2>${esc(o.name)}</h2><div class="english">${esc(o.english.toUpperCase())}</div><p>${esc(o.profession)} / ${esc(o.branch)} / ${o.position==='MELEE'?'近战位':'远程位'}</p><div class="card-bonds">${bondTags(o,detail.elite)}</div></div></div><div class="detail-controls"><div class="state-switch"><button data-detail-state="normal" class="${!detail.elite?'active':''}">初始状态</button><button data-detail-state="elite" class="${detail.elite?'active':''}">精锐状态</button></div><button class="dock-open" data-add="${base.chessId}">${selected(base)?'✓ 已在阵容 · 移除':'＋ 加入本局阵容'}</button></div><div class="record-actions"><button data-fav="${base.chessId}" aria-pressed="${favorites.has(base.chessId)}">${favorites.has(base.chessId)?"★ 已收藏":"☆ 收藏"}</button><button data-compare="${base.chessId}" aria-pressed="${comparison.includes(base.chessId)}">⇄ ${comparison.includes(base.chessId)?"已加入对比":"加入对比"}</button></div><p class="training-note">${trainingText(s)}</p>${base.backup?`<div class="notice">未调用时使用原型补位：<button class="source-link" data-variant="${detail.variant==='backup'?'main':'backup'}">查看${esc(detail.variant==='backup'?base.name:base.backup.name)} ↗</button><br>驻守特质与盟约沿用本槽位；战斗技能、职业及属性随实际干员变化。</div>`:''}<section class="detail-section"><h3>驻守特质 <span>${esc(s.traitType)}</span></h3><div class="trait-box">${esc(s.trait)}</div><details class="raw-details"><summary>驻守效果原始参数</summary><pre>${esc(JSON.stringify(s.garrison,null,2))}</pre></details></section><section class="detail-section"><h3>战斗技能 <span>RANK ${s.status.skillLevel}</span></h3><div class="skill-tabs">${s.skills.map(k=>`<button data-detail-skill="${k.index}" class="${k.index===sk.index?'active':''}">S${k.index+1} ${esc(k.name)}${k.index===o.defaultSkill?(base.type==='DIY'?' · 参考':' · 默认'):''}</button>`).join('')}</div>${skillMarkup(sk)}</section><section class="detail-section"><h3>攻击与技能范围 <span>RANGE</span></h3><div class="range-layout"><div><p>常态攻击范围</p>${rangeMarkup(s.range)}</div><div><p>技能范围 ${sk.range?'':'（沿用常态）'}</p>${rangeMarkup(sk.range||s.range)}</div></div><p class="small-note">白色方格为自身；示意朝向向右。超出图窗的全场范围以技能描述为准。</p></section><section class="detail-section"><h3>基础属性 <span>BASE ATTRIBUTES</span></h3><div class="attribute-grid">${attrs.map(([name,key])=>`<div>${name}<b>${['maxHp','atk','def'].includes(key)?Math.round(s.attributes[key]):s.attributes[key]}${['respawnTime','baseAttackTime'].includes(key)?'s':''}</b></div>`).join('')}</div><p class="small-note">按本状态等级插值的裸属性，未计潜能、模组属性、天赋增益、持有加成与盟约／装备。实际战斗面板会变化。</p></section><section class="detail-section"><h3>分支特性与天赋 <span>TALENTS</span></h3><p class="talent-item">${esc(o.description)}</p>${s.talents.map(t=>`<div class="talent-item"><b>${esc(t.name)}</b>${esc(t.description)}</div>`).join('')||'<p class="small-note">当前状态无已解锁天赋。</p>'}</section>${s.module?`<section class="detail-section"><h3>模组 ${esc(s.module.name)} <span>STAGE ${s.module.level}</span></h3>${s.module.effects.map(t=>`<p class="talent-item">${esc(t)}</p>`).join('')}<p class="training-note">模组附加属性：${s.module.attributes.map(x=>`${({atk:'攻击',def:'防御',max_hp:'生命',magic_resistance:'法抗',attack_speed:'攻速'})[x.key]||esc(x.key)} +${x.value}`).join(' / ')}</p></section>`:''}<section class="detail-section"><h3>数据溯源 <span>V3_1</span></h3><p class="small-note">客户端配置快照：${data.meta.clientData}<br>槽位 ID：${esc(base.chessId)}<br>技能 ID：${esc(sk.id)}</p><a class="source-link" href="${data.meta.sourceBase}skill_table.json" target="_blank" rel="noopener">核对原始技能表 ↗</a> · <a class="source-link" href="https://prts.wiki/w/${encodeURIComponent(o.name)}" target="_blank" rel="noopener">PRTS 干员档案 ↗</a></section>`);
+ showModal(modalHeader('干员介绍 / '+esc(o.name))+`<div class="detail-hero"><img src="${o.portrait}" alt="${esc(o.name)}立绘"><div class="detail-info"><span class="bond-tag core">${roman[base.tier]} 阶 · ${detail.elite?'精锐':'初始'}${base.hidden?' / 特殊获取':''}</span><h2>${esc(o.name)}</h2><div class="english">${esc(o.english.toUpperCase())}</div><p>${esc(o.profession)} / ${esc(o.branch)} / ${o.position==='MELEE'?'近战位':'远程位'}</p><div class="card-bonds">${bondTags(o,detail.elite)}</div></div></div><div class="detail-controls"><div class="state-switch"><button data-detail-state="normal" class="${!detail.elite?'active':''}">初始状态</button><button data-detail-state="elite" class="${detail.elite?'active':''}">精锐状态</button></div><button class="dock-open" data-add="${base.chessId}">${selected(base)?'✓ 已在阵容 · 移除':'＋ 加入本局阵容'}</button></div><div class="record-actions"><button data-fav="${base.chessId}" aria-pressed="${favorites.has(base.chessId)}">${favorites.has(base.chessId)?"★ 已收藏":"☆ 收藏"}</button><button data-compare="${base.chessId}" aria-pressed="${comparison.includes(base.chessId)}">⇄ ${comparison.includes(base.chessId)?"已加入对比":"加入对比"}</button></div><p class="training-note">${trainingText(s)}</p>${base.backup?`<div class="notice">未调用时使用原型补位：<button class="source-link" data-variant="${detail.variant==='backup'?'main':'backup'}">查看${esc(detail.variant==='backup'?base.name:base.backup.name)} ↗</button><br>驻守特质与盟约沿用本槽位；战斗技能、职业及属性随实际干员变化。</div>`:''}<section class="detail-section"><h3>驻守特质 <span>${esc(s.traitType)}</span></h3><div class="trait-box">${esc(s.trait)}</div><details class="raw-details"><summary>驻守效果原始参数</summary><pre>${esc(JSON.stringify(s.garrison,null,2))}</pre></details></section><section class="detail-section"><h3>战斗技能 <span>RANK ${s.status.skillLevel}</span></h3><div class="skill-tabs">${s.skills.map(k=>`<button data-detail-skill="${k.index}" class="${k.index===sk.index?'active':''}">S${k.index+1} ${esc(k.name)}${k.index===o.defaultSkill?(base.type==='DIY'?' · 参考':' · 默认'):''}</button>`).join('')}</div>${skillMarkup(sk)}</section><section class="detail-section"><h3>攻击与技能范围 <span>RANGE</span></h3><div class="range-layout"><div><p>常态攻击范围</p>${rangeMarkup(s.range)}</div><div><p>技能范围 ${sk.range?'':'（沿用常态）'}</p>${rangeMarkup(sk.range||s.range)}</div></div><p class="small-note">白色方格为自身；示意朝向向右。超出图窗的全场范围以技能描述为准。</p></section><section class="detail-section"><h3>基础属性 <span>BASE ATTRIBUTES</span></h3><div class="attribute-grid">${attrs.map(([name,key])=>`<div>${name}<b>${['maxHp','atk','def'].includes(key)?Math.round(s.attributes[key]):s.attributes[key]}${['respawnTime','baseAttackTime'].includes(key)?'s':''}</b></div>`).join('')}</div><p class="small-note">按本状态等级插值的裸属性，未计潜能、模组属性、天赋增益、持有加成与盟约／装备。实际战斗面板会变化。</p></section><section class="detail-section"><h3>分支特性与天赋 <span>TALENTS</span></h3><p class="talent-item">${esc(o.description)}</p>${s.talents.map(t=>`<div class="talent-item"><b>${esc(t.name)}</b>${esc(t.description)}</div>`).join('')||'<p class="small-note">当前状态无已解锁天赋。</p>'}</section>${s.module?`<section class="detail-section"><h3>模组 ${esc(s.module.name)} <span>STAGE ${s.module.level}</span></h3>${s.module.effects.map(t=>`<p class="talent-item">${esc(t)}</p>`).join('')}<p class="training-note">模组附加属性：${s.module.attributes.map(x=>`${({atk:'攻击',def:'防御',max_hp:'生命',magic_resistance:'法抗',attack_speed:'攻速'})[x.key]||esc(x.key)} +${x.value}`).join(' / ')}</p></section>`:''}<section class="detail-section"><h3>数据溯源 <span>V3_1</span></h3><p class="small-note">客户端配置快照：${data.meta.clientData}<br>槽位 ID：${esc(base.chessId)}<br>技能 ID：${esc(sk.id)}</p><a class="source-link" href="${data.meta.sourceBase}skill_table.json" target="_blank" rel="noopener">核对原始技能表 ↗</a> · <a class="source-link" href="https://prts.wiki/w/${encodeURIComponent(o.name)}" target="_blank" rel="noopener">PRTS 干员档案 ↗</a></section>`);
 }
 function showSources() {
  showModal(modalHeader('DATA PROVENANCE / V3_1')+`<div class="sources-copy"><span class="section-index">SOURCE & VERSION</span><h2>数据有出处，决策有依据。</h2><div class="notice">当前版本：${esc(data.meta.season)}<br>开放：${data.meta.start}<br>最近核对：${data.meta.checked} · 国服客户端数据 ${data.meta.clientData}</div><p>期次由鹰角官方公告核对。数值从客户端活动配置与技能表提取，固定到同一个 Git 提交，不跨期拼接。</p><ul class="source-list">${data.meta.sources.map(s=>`<li><a href="${s.url}" target="_blank" rel="noopener">${esc(s.title)} ↗</a></li>`).join('')}</ul><h3>收录范围与数值口径</h3><p>143 个固定干员槽位（含 2 个特殊获取槽位），67 组原型补位关系，26 个盟约，${data.strategies.length} 条角色策略，${data.equipment.length} 个可见装备条目。原型可能重复使用，所以不将补位关系数当作新增干员数。</p><p>每个固定槽位包含初始／精锐特质、4／7 级全部技能、初始技力、所需技力、回复方式、持续时间、充能次数、自动施放方案、等级属性、天赋及默认模组。技能数据为基础参数，技能／天赋／模组和局内效果可改变实战表现。</p><p>本期另有 75 名自选候选（含原型），可按Ⅴ／Ⅵ阶查询并加入草案，每阶最多 2 名。同一干员不允许跨阶重复上场。自选干员没有专属驻守特质；核心盟约由客户端 mainPower/subPower 与 powerIdList 匹配，实际选择仍受局内禁用、持有及配置限制。自选技能默认先展示最高序号，各技能均可查；模组按游戏内选择，未擅自预设。未实现站位、装备转职或实际伤害模拟。缪尔赛思等专用自动施放逻辑若没有公开条件，明确保留原始标记。</p><h3>版本与更新</h3><p>这是可追溯的静态快照，后续游戏更新不会自动混入。新一期发布后，需要运行数据提取与校验，再发布对应数据包。</p><code>${data.meta.commit}</code><p><a class="source-link" href="data.json" download="garrison-v3-1.json">下载完整收录数据 JSON ↓</a></p><h3>图片来源</h3><p>26 个盟约图标与 61 名策略发起人头像来自 PRTS 的游戏资源提取，70 件装备按客户端技能图标 ID 精确匹配。图片均打包为本站本地资源。</p><p><a class="source-link" href="https://prts.wiki/w/卫戍协议·规程/PRTS盟约记录" target="_blank" rel="noopener">PRTS 图片来源 ↗</a> · <a class="source-link" href="assets/catalog.json" target="_blank" rel="noopener">查看逐图来源 ↗</a></p><h3>隐私与使用</h3><p>不需要账号。收藏、当前阵容和命名预设只存储在本机浏览器。预设不设人为数量上限，实际总量受浏览器存储空间限制。当前阵容可导出用于迁移备份。干员与游戏美术版权归鹰角网络所有；本工具为非官方玩家辅助工具。</p><details class="raw-details"><summary>源文件 SHA-256</summary><pre>${esc(JSON.stringify(data.meta.hashes,null,2))}</pre></details></div>`);
@@ -281,9 +305,51 @@ document.addEventListener('focusout',event=>{
  if(event.relatedTarget?.closest('#hover-card,[data-bond-tip],[data-op-tip]'))return;
  hoverCloseTimer=setTimeout(()=>{if(!hoverTarget?.matches(':hover')&&!$('#hover-card').matches(':hover'))hideHover();},180);
 });
+// A short tap selects; a stationary touch opens an in-place drawer.
+let press=null,pressTimer,suppressedPress=null,suppressUntil=0;
+function cancelPress(suppress=false) {
+ clearTimeout(pressTimer);
+ if(press&&suppress){suppressedPress=press.target;suppressUntil=Date.now()+1000;}
+ press=null;
+}
+function pressTarget(target) {
+ return target.closest('[data-context-open],[data-op-tip][data-open],.dock-member');
+}
+document.addEventListener('pointerdown',event=>{
+ if(event.pointerType!=='touch'&&event.pointerType!=='pen')return;
+ if(!event.isPrimary){cancelPress(true);return;}
+ const target=pressTarget(event.target);
+ if(!target||event.target.closest('.dock-remove')||!$('#overlay').hidden)return;
+ cancelPress();suppressedPress=null;
+ press={target,id:event.pointerId,x:event.clientX,y:event.clientY};
+ pressTimer=setTimeout(()=>{
+  if(!press||!target.isConnected)return;
+  const id=target.dataset.contextOpen||target.dataset.open||target.dataset.opTip;
+  const elite=target.dataset.openElite??target.dataset.opElite;
+  suppressedPress=target;suppressUntil=Date.now()+1500;
+  openDetail(id,elite===undefined?state.elite:elite==='true');
+ },450);
+},{passive:true});
+document.addEventListener('pointermove',event=>{
+ if(press&&event.pointerId===press.id&&Math.hypot(event.clientX-press.x,event.clientY-press.y)>10)cancelPress(true);
+},{passive:true});
+document.addEventListener('pointerup',()=>{
+ if(press&&suppressedPress===press.target)suppressUntil=Date.now()+1000;
+ cancelPress();
+},{passive:true});
+document.addEventListener('pointercancel',()=>cancelPress(true),{passive:true});
+document.addEventListener('scroll',()=>cancelPress(true),{capture:true,passive:true});
+window.addEventListener('blur',()=>cancelPress());
+document.addEventListener('click',event=>{
+ if(suppressedPress&&Date.now()<suppressUntil&&(suppressedPress.contains(event.target)||event.target===$('#overlay'))){event.preventDefault();event.stopImmediatePropagation();}
+ suppressedPress=null;
+},true);
 document.addEventListener('contextmenu',event=>{
- const target=event.target.closest('[data-context-open]');if(!target)return;
- event.preventDefault();openDetail(target.dataset.contextOpen);
+ const target=pressTarget(event.target);if(!target)return;
+ event.preventDefault();cancelPress();
+ if(!$('#overlay').hidden)return;
+ const elite=target.dataset.openElite??target.dataset.opElite;
+ openDetail(target.dataset.contextOpen||target.dataset.open||target.dataset.opTip,elite===undefined?state.elite:elite==='true');
 });
 document.addEventListener('change',event=>{
  if(event.target.id!=='hover-stacks')return;
@@ -393,16 +459,18 @@ document.addEventListener('click',e=>{
  if(d.presetDelete){deletePreset(d.presetDelete);return;}
  if(d.pool){state.pool=d.pool;resetFilters();render();return;}
  if(d.customTier){state.customTier=Number(d.customTier);state.limit=PAGE_SIZE;render();return;}
- if(d.nav){if(!$('#overlay').hidden)closeModal();switchView(d.nav);if(d.nav==='squad')$('#page-title').scrollIntoView({block:'start',behavior:'smooth'});return;}
+ if(d.nav){if(!$('#overlay').hidden)closeModal();switchView(d.nav);if(d.nav==='squad')scrollToCatalog();return;}
+ if(d.open&&b.matches('.card-open')&&matchMedia('(hover: none)').matches){addToSquad(d.open);return;}
  if(d.open){openDetail(d.open,d.openElite!==undefined?d.openElite==='true':state.elite);return;}
  if(d.fav){favorites.has(d.fav)?favorites.delete(d.fav):favorites.add(d.fav);persist();render();if(detail.chess&&!$('#overlay').hidden)renderDetail();return;}
  if(d.add){addToSquad(d.add);return;}
  if(d.compare){compareToggle(d.compare);return;}
  if(d.bond && matchMedia('(hover: none)').matches){openBondDetail(d.bond);return;}
- if(d.bond||d.members){const id=d.bond||d.members;if(!$('#overlay').hidden)closeModal();resetFilters();state.bonds.add(id);switchView('operators');$('#page-title').scrollIntoView({block:'start',behavior:'smooth'});return;}
+ if(d.bond||d.members){const id=d.bond||d.members;if(!$('#overlay').hidden)closeModal();resetFilters();state.bonds.add(id);switchView('operators');scrollToCatalog();return;}
  if(d.filterBond){state.bonds.has(d.filterBond)?state.bonds.delete(d.filterBond):state.bonds.add(d.filterBond);state.limit=PAGE_SIZE;render();return;}
  if(d.tier){const n=Number(d.tier);state.tiers.has(n)?state.tiers.delete(n):state.tiers.add(n);state.limit=PAGE_SIZE;render();return;}
- if(d.state){state.elite=d.state==='elite';render();return;}
+ if(d.state||d.quickState){state.elite=(d.state||d.quickState)==='elite';render();return;}
+ if(d.mobileFavorites){state.favorites=!state.favorites;state.limit=PAGE_SIZE;render();return;}
  if(d.detailState){detail.elite=d.detailState==='elite';renderDetail();return;}
  if(d.detailSkill!==undefined){detail.skill=Number(d.detailSkill);renderDetail();return;}
  if(d.variant){detail.variant=d.variant;detail.skill=(d.variant==='backup'?byChess.get(detail.chess).backup:byChess.get(detail.chess)).defaultSkill;renderDetail();return;}
@@ -410,7 +478,7 @@ document.addEventListener('click',e=>{
  if(d.memberState){const m=squad.find(x=>x.chessId===d.memberState);if(m)m.elite=d.value==='elite';persist();render();return;}
  if(d.bondDetail){openBondDetail(d.bondDetail);return;}
  if(d.equipmentTab){state.equipmentTab=d.equipmentTab;render();return;}
- const actions={'ban-toggle':()=>{state.banOpen=!state.banOpen;renderBanControls();$('[data-action=ban-toggle]').focus({preventScroll:true});},'ban-clear':()=>{state.banned.clear();state.limit=PAGE_SIZE;persist();render();},'clear-stack-kind':()=>{state.stackKind='';state.limit=PAGE_SIZE;render();},'preset-more':()=>{presetLimit+=12;renderPresetLibrary();},sources:showSources,close:closeModal,reset:()=>{resetFilters();render();},favorites:()=>{state.favorites=!state.favorites;state.limit=PAGE_SIZE;render();},filters:()=>$('#filters').classList.toggle('mobile-open'),focus:()=>{state.focus=!state.focus;document.body.classList.toggle('focus-mode',state.focus);$('#focus-button').innerHTML=state.focus?'⛶ <span>退出专注</span>':'⛶ <span>局内专注</span>';persist();},grid:()=>setCompact(false),list:()=>setCompact(true),'compare-open':showComparison,'compare-clear':()=>{comparison=[];render();},'clear-squad':()=>{if(!squad.length)return;const before=[...squad];squad=[];persist();render();toast('阵容已清空 · 点击此处可撤销');$('#toast').classList.add('undo');$('#toast').onclick=()=>{squad=before;persist();render();$('#toast').onclick=null;$('#toast').classList.remove('undo');toast('已恢复阵容');};},export:exportSquad,import:()=>$('#squad-import').click()};
+ const actions={'ban-toggle':()=>{state.banOpen=!state.banOpen;renderBanControls();$('[data-action=ban-toggle]').focus({preventScroll:true});},'ban-clear':()=>{state.banned.clear();state.limit=PAGE_SIZE;persist();render();},'clear-stack-kind':()=>{state.stackKind='';state.limit=PAGE_SIZE;render();},'preset-more':()=>{presetLimit+=12;renderPresetLibrary();},sources:showSources,close:closeModal,reset:()=>{resetFilters();render();},favorites:()=>{state.favorites=!state.favorites;state.limit=PAGE_SIZE;render();},filters:()=>setFiltersOpen(!$('#filters').classList.contains('mobile-open')),focus:()=>{state.focus=!state.focus;document.body.classList.toggle('focus-mode',state.focus);$('#focus-button').innerHTML=state.focus?'⛶ <span>退出专注</span>':'⛶ <span>局内专注</span>';persist();},grid:()=>setCompact(false),list:()=>setCompact(true),'compare-open':showComparison,'compare-clear':()=>{comparison=[];render();},'clear-squad':()=>{if(!squad.length)return;const before=[...squad];squad=[];persist();render();toast('阵容已清空 · 点击此处可撤销');$('#toast').classList.add('undo');$('#toast').onclick=()=>{squad=before;persist();render();$('#toast').onclick=null;$('#toast').classList.remove('undo');toast('已恢复阵容');};},export:exportSquad,import:()=>$('#squad-import').click()};
  if(actions[d.action])actions[d.action]();
 });
 function setCompact(v) {state.compact=v;hideHover();document.body.classList.toggle('compact',v);$$('[data-action="grid"],[data-action="list"]').forEach(el=>el.classList.toggle('active',el.dataset.action===(v?'list':'grid')));persist();if(data)render();}
@@ -418,7 +486,7 @@ document.addEventListener('change',e=>{const t=e.target;if(t.id==='identity-matc
 $('#search').addEventListener('input',e=>{clearTimeout(searchTimer);state.query=e.target.value;state.limit=PAGE_SIZE;searchTimer=setTimeout(render,90);});
 $('#overlay').addEventListener('click',e=>{if(e.target===$('#overlay'))closeModal();});
 document.addEventListener('keydown',e=>{
- if(e.key==='Escape'){hideHover();if(!$('#overlay').hidden){closeModal();return;}}
+ if(e.key==='Escape'){hideHover();if(!$('#overlay').hidden){closeModal();return;}setFiltersOpen(false);}
  if(e.key==='Enter'&&e.shiftKey&&e.target.dataset.contextOpen){e.preventDefault();openDetail(e.target.dataset.contextOpen);return;}
  if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)&&$('#overlay').hidden){e.preventDefault();$('#search').focus();}
  if(e.key==='Tab'&&!$('#overlay').hidden){const els=$$('button:not(:disabled),a[href],input,select,summary,[tabindex="0"]',$('#detail-panel')).filter(el=>!el.hidden);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&(document.activeElement===first||document.activeElement===$('#detail-panel'))){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}

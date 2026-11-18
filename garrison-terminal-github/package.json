@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "python3 -m http.server 4173 --directory dist --bind 0.0.0.0",
     "build": "node scripts/check-site.mjs && node --check dist/app.js && node --check dist/operator-roles.js && node scripts/operator-roles-test.mjs && node --check dist/catalog-rules.js && node scripts/catalog-rules-test.mjs",
-    "test": "node scripts/browser-test.mjs && node scripts/presets-test.mjs && node scripts/role-ui-test.mjs && node scripts/ban-ui-test.mjs && node scripts/dock-ui-test.mjs",
+    "test": "node scripts/browser-test.mjs && node scripts/presets-test.mjs && node scripts/role-ui-test.mjs && node scripts/ban-ui-test.mjs && node scripts/dock-ui-test.mjs && node scripts/mobile-ui-test.mjs",
     "data:check": "python3 scripts/build_data.py --check",
     "data:rebuild": "python3 scripts/fetch_sources.py && python3 scripts/build_data.py",
     "export:github": "node scripts/export-github.mjs"
