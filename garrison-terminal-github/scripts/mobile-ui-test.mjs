@@ -48,8 +48,8 @@ try {
   assert.equal(await page.evaluate(()=>location.hash),hash,'No route change for details');
   assert.equal(await page.locator('.app-shell').evaluate(el=>el.inert),true);
   const drawer=await page.locator('#detail-panel').boundingBox();
-  assert.ok(drawer.x>=48&&drawer.width<=320&&Math.abs(drawer.x+drawer.width-390)<1,'Compact drawer leaves the list visible on its left');
-  assert.ok(drawer.height<600,'The default record fits into a content-height sheet');
+  assert.ok(drawer.x>=390*.28-1&&drawer.width<=280&&Math.abs(drawer.x+drawer.width-390)<1,'Narrow drawer leaves at least 28% of the list visible');
+  assert.ok(Math.abs(drawer.y)<1&&Math.abs(drawer.height-844)<1,'The narrow drawer uses the full viewport height');
   assert.equal(await page.locator('.operator-more').evaluate(el=>el.open),false,'Secondary information starts collapsed');
   assert.equal(await page.locator('.detail-hero').isVisible(),false);
   assert.equal(await page.locator('.record-actions').isVisible(),false);
@@ -133,7 +133,8 @@ try {
     await page.locator('.tile-portrait').first().dispatchEvent('contextmenu');
     await page.waitForTimeout(230);
     const rect=await page.locator('#detail-panel').boundingBox();
-    assert.ok(rect.x>=30&&rect.x+rect.width<=width+1);
+    assert.ok(rect.width<=Math.min(280,width*.72)+1&&rect.x+rect.width<=width+1,'Drawer stays narrow across screen sizes');
+    assert.ok(Math.abs(rect.y)<1&&Math.abs(rect.height-844)<1,'Drawer stays full height');
     assert.equal(await page.locator('#detail-panel').evaluate(el=>el.scrollWidth<=el.clientWidth),true,`Drawer content fits ${width}px`);
     await closeDrawer();
   }
@@ -147,5 +148,5 @@ try {
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#overlay').isVisible(),false);
   assert.deepEqual(errors,[]);
-  console.log('PASS: real touch tap/long press, release suppression, swipe cancellation, persistent focus, scroll restoration, content-height quick drawer, named bonds, collapsed secondary record, skill switching and sticky close, quick training, collapsible filters, touch card selection, stored dock state, nine slots, portrait/landscape and 320–768px overflow checks.');
+  console.log('PASS: real touch tap/long press, release suppression, swipe cancellation, persistent focus, scroll restoration, narrow full-height drawer, named bonds, collapsed secondary record, skill switching and sticky close, quick training, collapsible filters, touch card selection, stored dock state, nine slots, portrait/landscape and 320–768px overflow checks.');
 } finally {await browser.close();}
