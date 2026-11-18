@@ -48,16 +48,30 @@ try {
   assert.equal(await page.evaluate(()=>location.hash),hash,'No route change for details');
   assert.equal(await page.locator('.app-shell').evaluate(el=>el.inert),true);
   const drawer=await page.locator('#detail-panel').boundingBox();
-  assert.ok(drawer.x>=30&&Math.abs(drawer.x+drawer.width-390)<1,'Drawer leaves the list visible on its left');
-  const bondImages=await page.locator('.detail-hero .bond-icon img').evaluateAll(els=>els.map(el=>({width:el.getBoundingClientRect().width,position:getComputedStyle(el).position})));
+  assert.ok(drawer.x>=48&&drawer.width<=320&&Math.abs(drawer.x+drawer.width-390)<1,'Compact drawer leaves the list visible on its left');
+  assert.ok(drawer.height<600,'The default record fits into a content-height sheet');
+  assert.equal(await page.locator('.operator-more').evaluate(el=>el.open),false,'Secondary information starts collapsed');
+  assert.equal(await page.locator('.detail-hero').isVisible(),false);
+  assert.equal(await page.locator('.record-actions').isVisible(),false);
+  const initialOperator=data.operators.find(o=>o.chessId===id);
+  assert.deepEqual(await page.locator('.quick-bonds .bond-icon span').allTextContents(),initialOperator.normal.bonds.map(id=>data.bonds.find(b=>b.bondId===id).name));
+  const bondImages=await page.locator('.quick-bonds .bond-icon img').evaluateAll(els=>els.map(el=>({width:el.getBoundingClientRect().width,position:getComputedStyle(el).position})));
   assert.ok(bondImages.every(img=>img.width<=28&&img.position==='static'),'Bond icons stay inside the compact header');
   await page.locator('[data-detail-state=elite]').tap();
   assert.equal(await page.locator('[data-detail-state=elite]').getAttribute('class'),'active');
   const operator=data.operators.find(o=>o.chessId===id);
   assert.equal(await page.locator('.trait-box').textContent(),operator.elite.trait);
+  await page.locator('[data-detail-skill="0"]').tap();
+  assert.equal(await page.locator('.skill-description').textContent(),operator.elite.skills[0].description,'Skills still switch in the quick view');
+  assert.equal(await page.locator('.operator-more').evaluate(el=>el.open),false,'Switching skills keeps secondary content collapsed');
+  await page.locator('.operator-more>summary').tap();
+  assert.equal(await page.locator('.detail-hero').isVisible(),true,'Full record stays available on demand');
+  await page.locator('[data-detail-state=normal]').tap();
+  assert.equal(await page.locator('.operator-more').evaluate(el=>el.open),true,'Switching state preserves the disclosure');
   await page.locator('#detail-panel').evaluate(el=>el.scrollTop=250);
   const closeBox=await page.locator('#detail-panel [data-action=close]').boundingBox();
-  assert.ok(closeBox.y>=0&&closeBox.y<60,'Close control stays available while reading');
+  const expandedDrawer=await page.locator('#detail-panel').boundingBox();
+  assert.ok(closeBox.y>=expandedDrawer.y&&closeBox.y<expandedDrawer.y+60,'Close control stays available while reading');
   await closeDrawer();
   assert.equal(await page.locator('.app-shell').evaluate(el=>el.inert),false);
 
@@ -133,5 +147,5 @@ try {
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#overlay').isVisible(),false);
   assert.deepEqual(errors,[]);
-  console.log('PASS: real touch tap/long press, release suppression, swipe cancellation, persistent focus, scroll restoration, compact drawer with sticky close, quick training, collapsible filters, touch card selection, stored dock state, nine slots, portrait/landscape and 320–768px overflow checks.');
+  console.log('PASS: real touch tap/long press, release suppression, swipe cancellation, persistent focus, scroll restoration, content-height quick drawer, named bonds, collapsed secondary record, skill switching and sticky close, quick training, collapsible filters, touch card selection, stored dock state, nine slots, portrait/landscape and 320–768px overflow checks.');
 } finally {await browser.close();}

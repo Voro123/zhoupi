@@ -151,3 +151,38 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
   .topbar,.focus-mode .topbar{height:42px}.page-heading{display:none}
   .detail-hero{min-height:100px}.dock-bonds{display:none}.squad-dock{gap:3px}.dock-slots>.dock-slot,.dock-member,.dock-extra{max-width:32px}
 }
+
+/* The mobile operator drawer is a compact lookup; the complete record is optional. */
+@media(max-width:800px){
+  .detail-panel.operator-quick{width:min(320px,calc(100% - 48px));max-width:calc(100% - 48px);height:auto;max-height:calc(100dvh - 24px);align-self:center;margin-block:12px;padding:0 12px 8px;border-radius:8px 0 0 8px}
+  .operator-quick>.modal-topbar{display:grid;grid-template-columns:minmax(0,1fr) 88px 36px;gap:5px;min-height:44px;padding:0 6px 0 12px;margin:0 -12px 0;font-family:var(--body);font-size:14px;color:var(--text);letter-spacing:0}
+  .operator-quick>.modal-topbar .close-button{width:36px;height:40px;font-size:23px}
+  .operator-quick>.modal-topbar .state-switch{width:88px;min-width:0;padding:2px;gap:1px}
+  .operator-quick>.modal-topbar .state-switch button{min-height:28px;padding:2px 0;font-size:10px}
+  .operator-quick>.quick-bonds{display:flex;align-items:center;gap:5px;margin:8px 0;min-height:28px;flex-wrap:wrap}
+  .quick-label{font-size:11px;color:var(--muted);margin-right:2px}
+  .operator-quick .quick-bonds .bond-icon{display:inline-flex;align-items:center;gap:4px;width:auto;height:auto;min-height:28px;padding:2px 6px 2px 3px;font-size:11px}
+  .operator-quick .quick-bonds .bond-icon img{position:static;width:21px;height:21px;flex-shrink:0;object-fit:contain}
+  .operator-quick>.detail-section{margin:9px 0 0;padding-top:8px}
+  .operator-quick>.detail-section h3{margin:0 0 6px;font-size:12px}
+  .operator-quick>.detail-section h3 span{display:none}
+  .operator-quick>.detail-section .trait-box{padding:7px 9px;font-size:12px;line-height:1.75}
+  .operator-quick>.detail-section .skill-tabs{gap:4px;margin:0 0 5px}
+  .operator-quick>.detail-section .skill-tabs button{min-height:30px;padding:4px;font-size:11px;line-height:1.5}
+  .operator-quick>.detail-section .skill-heading{margin:3px 0;gap:0}
+  .operator-quick>.detail-section .skill-heading strong{display:none}
+  .operator-quick>.detail-section .skill-heading small{font-size:10px}
+  .operator-quick>.detail-section .skill-description{font-size:12px;line-height:1.75;margin:5px 0 8px}
+  .operator-quick>.detail-section .skill-stats{gap:0}
+  .operator-quick>.detail-section .skill-stats div{padding:5px 2px}
+  .operator-quick>.detail-section .skill-stats b{font-size:18px}
+  .operator-quick>.detail-section .skill-stats span{font-size:9px}
+  .operator-more{border-top:1px solid #2b393f;margin-top:10px;color:var(--muted)}
+  .operator-more>summary{font-size:11px;line-height:1.5;min-height:36px;padding:10px 0 5px;cursor:pointer}
+  .operator-more[open]>summary{color:var(--lime);margin-bottom:8px}
+  .operator-more .detail-hero{min-height:100px}.operator-more .detail-hero h2{font-size:20px}
+  .operator-more>.detail-controls{justify-content:flex-end}.operator-more>.detail-controls .dock-open{min-height:34px}
+  .operator-more .record-actions button{min-height:34px}
+  .operator-more .detail-section{margin-top:12px;padding-top:10px}
+  .operator-more .training-note,.operator-more .trigger-note{font-size:10px}
+}
