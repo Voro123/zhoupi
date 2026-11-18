@@ -49,3 +49,5 @@
 .preset-feedback{font-size:11px;color:#b8d99e;margin:8px 0;overflow-wrap:anywhere}.preset-feedback.error{color:#edb49c}.preset-save-form input[aria-invalid=true]{border-color:#cf9278}
 
 .dock-extra{position:relative;display:grid;place-items:center;border:1px dashed #3c4b48;border-radius:3px;background:#182321}.dock-extra.enabled{display:block;border:0;background:none}.dock-capacity{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:100%;height:100%;font-size:8px;line-height:1;color:#91a18c;cursor:pointer}.dock-capacity input{width:12px;height:12px;margin:0;accent-color:var(--lime);cursor:pointer}.dock-extra.enabled .dock-capacity{position:absolute;bottom:-4px;left:-3px;z-index:2;width:auto;height:auto;padding:2px;border-radius:2px;background:#182321}.dock-extra.enabled .dock-capacity span:empty{display:none}.dock-extra>.dock-slot,.dock-extra>.dock-member{width:100%;height:100%;max-width:none}
+
+img.banned-avatar{filter:grayscale(1);opacity:.4}
