@@ -74,6 +74,17 @@ try {
   assert.equal(await bond('raidShip').locator('b').textContent(),'1/2');
   assert.equal(await bond('raidShip').evaluate(el=>el.classList.contains('active')),false,'Removing a member immediately dims an incomplete bond');
 
+  // A reached one-person bond precedes an incomplete two-person core;
+  // incomplete bonds are then ordered by their current member counts.
+  await roster([member(solo[0]),...ursus.slice(0,2).map(o=>member(o)),member(raiders[0])]);
+  assert.deepEqual(await page.locator('.dock-bond').evaluateAll(els=>els.slice(0,2).map(el=>el.dataset.bondDetail)),['soloShip','ursusShip']);
+  assert.deepEqual(await page.locator('.dock-bond:not(.active) b').allTextContents(),['2/3','1/3','1/2','1/2']);
+  await page.locator('.main-nav [data-nav=squad]').click();
+  assert.deepEqual(await page.locator('.squad-bond-row').evaluateAll(els=>els.slice(0,2).map(el=>el.dataset.bondDetail)),['soloShip','ursusShip']);
+  await page.setViewportSize({width:390,height:844});
+  assert.deepEqual(await page.locator('.dock-bond').evaluateAll(els=>els.slice(0,2).map(el=>el.dataset.bondDetail)),['soloShip','ursusShip']);
+  await page.setViewportSize({width:1440,height:1080});
+
   // No current slot carries 绝技; exercise its elite-only rule with a response fixture.
   const fixture=structuredClone(data);
   fixture.operators.slice(0,2).forEach(o=>{o.normal.bonds.push('suntShip');o.elite.bonds.push('suntShip');});
